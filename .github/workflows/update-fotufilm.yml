@@ -1,0 +1,52 @@
+name: update-fotufilm
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Check for a new upstream release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api repos/DhaliwalX/fotufilm-engine/releases/latest --jq .tag_name)
+          latest=${latest#v}
+          current=$(sed -nE 's/^ *version = "([^"]+)";/\1/p' flake.nix)
+          echo "current=$current latest=$latest"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version and hash
+        if: steps.check.outputs.latest != steps.check.outputs.current
+        env:
+          LATEST: ${{ steps.check.outputs.latest }}
+        run: |
+          url="https://github.com/DhaliwalX/fotufilm-engine/releases/download/v${LATEST}/Fotufilm-Linux-x86_64.AppImage"
+          hash=$(nix store prefetch-file --json "$url" | jq -r .hash)
+          sed -i -E "s|^( *version = )\"[^\"]+\";|\1\"${LATEST}\";|" flake.nix
+          sed -i -E "s|^( *hash = )\"[^\"]+\";|\1\"${hash}\";|" flake.nix
+          sed -i -E "s|Fotufilm [0-9.]+ for NixOS|Fotufilm ${LATEST} for NixOS|" flake.nix
+
+      - name: Build (fails the run if the postExtract patching broke)
+        if: steps.check.outputs.latest != steps.check.outputs.current
+        run: nix build .#fotufilm-bin --print-build-logs
+
+      - name: Open pull request
+        if: steps.check.outputs.latest != steps.check.outputs.current
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: update-fotufilm
+          commit-message: "fotufilm-bin: ${{ steps.check.outputs.current }} -> ${{ steps.check.outputs.latest }}"
+          title: "fotufilm-bin: ${{ steps.check.outputs.current }} -> ${{ steps.check.outputs.latest }}"
+          body: "Automated bump to upstream release v${{ steps.check.outputs.latest }}. The package built successfully before this PR was opened."
