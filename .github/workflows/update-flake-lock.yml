@@ -14,9 +14,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/update-flake-lock@main
-        with:
-          pr-title: "flake.lock: update nixpkgs"
-          pr-labels: |
-            dependencies
-            automated
+      - name: Update flake.lock
+        run: nix flake update
+      - name: Build
+        run: nix build .#fotufilm-bin --print-build-logs
+      - name: Commit and push
+        run: |
+          git diff --quiet flake.lock && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "flake.lock: update nixpkgs" flake.lock
+          git push
