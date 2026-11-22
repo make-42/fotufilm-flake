@@ -1,6 +1,6 @@
 
 {
-  description = "Fotufilm 1.16 for NixOS";
+  description = "Fotufilm 1.17 for NixOS";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -10,11 +10,11 @@
       pkgs = import nixpkgs { inherit system; };
 
       pname = "fotufilm-bin";
-      version = "1.16";
+      version = "1.17";
 
       src = pkgs.fetchurl {
         url = "https://github.com/DhaliwalX/fotufilm-engine/releases/download/v${version}/Fotufilm-Linux-x86_64.AppImage";
-        hash = "sha256-f+L8Xpi7/yy4w4xv3rtLaHNau4L2R821d5A7hSSwSjg=";
+        hash = "sha256-CS3vnKEiKdYpWqy/F0jQ1IEdf1NqgN3UQBdaR2zT0Wk=";
       };
 
       contents = pkgs.appimageTools.extract {
